@@ -5,7 +5,6 @@ db = None
 
 
 def create_app():
-
     global db
     app = Flask(__name__)
     app.config.from_object("config.Config")

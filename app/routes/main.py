@@ -4,13 +4,14 @@ from werkzeug.exceptions import UnsupportedMediaType
 from bson import ObjectId
 
 from app.models.usuario_login import LoginPayload
+from app.models.produto import ProdutoDBModel
 from app import db
 
 
 main_bp = Blueprint("main_bp", __name__)
 
 
-@main_bp.route("/")
+@main_bp.route("/", methods=["GET"])
 def index():
     return jsonify({"message": "Bem vindo ao StyleSync"})
 
@@ -42,11 +43,10 @@ def login():
 @main_bp.route("/produtos", methods=["GET"])
 def listar_produtos():
     produtos_cursor = db.produtos.find({})
-    lista_de_produtos = []
-
-    for produto in produtos_cursor:
-        produto["_id"] = str(produto["_id"])
-        lista_de_produtos.append(produto)
+    lista_de_produtos = [
+        ProdutoDBModel(**produto).model_dump(by_alias=True, exclude_none=True)
+        for produto in produtos_cursor
+    ]
 
     return jsonify(lista_de_produtos)
 
@@ -55,7 +55,7 @@ def listar_produtos():
 def buscar_produto_por_id(produto_id):
     try:
         id_db = ObjectId(produto_id)
-        
+
     except Exception as e:
         return jsonify(
             {"error": f"Erro ao transformar o {produto_id} em ObjectId: {e}"}
@@ -63,14 +63,9 @@ def buscar_produto_por_id(produto_id):
 
     produto = db.produtos.find_one({"_id": id_db})
     if produto:
-        produto["_id"] = str(produto["_id"])
-        return jsonify(produto)
+        return jsonify(ProdutoDBModel(**produto).model_dump(by_alias=True, exclude_none=True))
 
-    return jsonify(
-        {
-            "erro": f"Produto com o id {produto_id} não encontrado"
-        }
-    ), 404
+    return jsonify({"erro": f"Produto com o id {produto_id} não encontrado"}), 404
 
 
 @main_bp.route("/produtos", methods=["POST"])
