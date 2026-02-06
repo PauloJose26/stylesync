@@ -3,7 +3,7 @@ from typing import Optional
 from bson import ObjectId
 
 
-class Produto(BaseModel):
+class ProdutoBase(BaseModel):
     id: Optional[ObjectId] = Field(None, alias="_id")
     nome: str
     preco: float
@@ -13,7 +13,7 @@ class Produto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
 
-class ProdutoDBModel(Produto):
+class ProdutoDBModel(ProdutoBase):
     def model_dump(
         self,
         *,

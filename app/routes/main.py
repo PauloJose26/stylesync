@@ -1,10 +1,13 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from pydantic import ValidationError
 from werkzeug.exceptions import UnsupportedMediaType
 from bson import ObjectId
+from datetime import datetime, timedelta, timezone
+import jwt
 
 from app.models.usuario_login import LoginPayload
-from app.models.produto import ProdutoDBModel
+from app.models.produto import *
+from app.decorators import token_required
 from app import db
 
 
@@ -19,8 +22,8 @@ def index():
 @main_bp.route("/login", methods=["POST"])
 def login():
     try:
-        dados_brutos = request.get_json()
-        dados_usuario = LoginPayload(**dados_brutos)
+        dados = request.get_json()
+        dados_usuario = LoginPayload(**dados)
 
     except ValidationError as e:
         return jsonify({"error": e.errors()}), 400
@@ -28,16 +31,24 @@ def login():
         return (
             jsonify(
                 {
-                    "error": "Erro durante a requisição do dado",
-                    "message": "Os dados não foram enviados",
+                    "error": "Corpo da requisição inválido ou não é um JSON",
                 }
             ),
             400,
         )
 
-    return jsonify(
-        {"message": f"Realizar o login do usuario {dados_usuario.model_dump()}"}
-    )
+    if dados_usuario.username == "admin" and dados_usuario.password == "supersecret":
+        token = jwt.encode(
+            {
+                "user_id": dados_usuario.username,
+                "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
+            },
+            current_app.config["SECRET_KEY"],
+            algorithm="HS256",
+        )
+        return jsonify({"access_token": token}), 200
+
+    return jsonify({"error": "Credenciais inválidas"}), 401
 
 
 @main_bp.route("/produtos", methods=["GET"])
@@ -63,14 +74,27 @@ def buscar_produto_por_id(produto_id):
 
     produto = db.produtos.find_one({"_id": id_db})
     if produto:
-        return jsonify(ProdutoDBModel(**produto).model_dump(by_alias=True, exclude_none=True))
+        return jsonify(
+            ProdutoDBModel(**produto).model_dump(by_alias=True, exclude_none=True)
+        )
 
     return jsonify({"erro": f"Produto com o id {produto_id} não encontrado"}), 404
 
 
 @main_bp.route("/produtos", methods=["POST"])
-def cadastrar_produtos():
-    return jsonify({"message": "Esta é a rota de criação dos produtos"})
+@token_required
+def cadastrar_produtos(token):
+    try:
+        dados = request.get_json()
+        produto = ProdutoBase(**dados)
+    except ValidationError as e:
+        return jsonify({"error": e.errors()})
+
+    resultado = db.produtos.insert_one(produto.model_dump())
+    return (
+        jsonify({"message": f"Produto criado", "id": str(resultado.inserted_id)}),
+        201,
+    )
 
 
 @main_bp.route("/produtos/<int:produto_id>", methods=["PUT"])
