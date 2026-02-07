@@ -51,3 +51,10 @@ class ProdutoDBModel(ProdutoBase):
             data["_id"] = str(data["_id"])
 
         return data
+
+
+class UpdateProduto(BaseModel):
+    nome: Optional[str] = None
+    preco: Optional[float] = None
+    estoque: Optional[int] = None
+    descricao: Optional[str] = None
