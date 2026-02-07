@@ -13,6 +13,14 @@ class ProdutoBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
 
+class UpdateProduto(BaseModel):
+    nome: Optional[str] = None
+    preco: Optional[float] = None
+    estoque: Optional[int] = None
+    descricao: Optional[str] = None
+
+
+
 class ProdutoDBModel(ProdutoBase):
     def model_dump(
         self,
@@ -51,10 +59,3 @@ class ProdutoDBModel(ProdutoBase):
             data["_id"] = str(data["_id"])
 
         return data
-
-
-class UpdateProduto(BaseModel):
-    nome: Optional[str] = None
-    preco: Optional[float] = None
-    estoque: Optional[int] = None
-    descricao: Optional[str] = None

@@ -29,7 +29,7 @@ def buscar_produto_por_id(produto_id):
     except Exception as error:
         return jsonify(
             {"error": f"Erro ao transformar o {produto_id} em ObjectId ({error})"}
-        )
+        ), 400
 
     produto = db.produtos.find_one({"_id": id_db})
     if produto:
@@ -47,7 +47,7 @@ def cadastrar_produtos(token):
         dados = request.get_json()
         produto = ProdutoBase(**dados)
     except ValidationError as error:
-        return jsonify({"error": error.errors()}), 200
+        return jsonify({"error": error.errors()}), 400
 
     resultado = db.produtos.insert_one(produto.model_dump())
     return (
